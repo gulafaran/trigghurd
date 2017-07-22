@@ -14,7 +14,7 @@ enum msg_type {
 
 struct irc_msg {
   enum msg_type type;
-  char *raw;
+  char raw[MAX_LINE_SIZE];
   char *msg;
   char *nick_sent;
   char *channel;

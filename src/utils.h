@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 
+void str_add_to(char *str, const char *prefix, int dest);
 char *str_combine(char *str1, char *str2);
 bool str_contains(char *str, char *occ);
 bool str_empty(char *str);

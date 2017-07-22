@@ -20,7 +20,7 @@ void create_msg(struct irc_socket *sock, struct irc_msg *msg) {
   char **strings;
 
   msg->type = NONE;
-  msg->raw = strdup(sock->line);
+  str_add_to((char *)&msg->raw, sock->line, 0);
   msg->msg = NULL;
   msg->nick_sent = NULL;
   msg->channel = NULL;
@@ -84,7 +84,8 @@ void create_msg(struct irc_socket *sock, struct irc_msg *msg) {
 }
 
 void handle_msg(struct irc_socket *sock, struct irc_server_info *srv, struct irc_msg *msg) {
-  char *tmp = NULL;
+  char tmp[MAX_LINE_SIZE];
+  memset(tmp, 0, sizeof(tmp));
 
   switch(msg->type) {
     case NONE:
@@ -92,48 +93,55 @@ void handle_msg(struct irc_socket *sock, struct irc_server_info *srv, struct irc
     case PRIVMSG:
     if(msg->channel != NULL) {
       if(str_startswith(msg->msg, ",hi")) {
-        char *m = str_combine("PRIVMSG ", msg->channel);
-        char *n = str_combine(m, " :hi ");
-        tmp = str_combine(n, msg->nick_sent);
-        safefree((void **)&m);
-        safefree((void **)&n);
+        str_add_to((char *)&tmp, "PRIVMSG ", 0);
+        str_add_to((char *)&tmp, msg->channel, strlen(tmp));
+        str_add_to((char *)&tmp, " :hi ", strlen(tmp));
+        str_add_to((char *)&tmp, msg->nick_sent, strlen(tmp));
       }
     }
     break;
     case PONG:
-      tmp = str_combine("PING :", msg->msg);
+      str_add_to((char *)&tmp, "PING :", 0);
+      str_add_to((char *)&tmp, msg->msg, strlen(tmp));
     break;
     case PING:
-      tmp = str_combine("PONG :", msg->msg);
+      str_add_to((char *)&tmp, "PONG :", 0);
+      str_add_to((char *)&tmp, msg->msg, strlen(tmp));
     break;
     case RPL_ENDOFMOTD:
-      tmp = str_combine("JOIN ", srv->channels);
+      str_add_to((char *)&tmp, "JOIN ", 0);
+      str_add_to((char *)&tmp, srv->channels, strlen(tmp));
     break;
   }
 
-  if(tmp != NULL) {
+  if(strlen(tmp) > 0) {
     send_raw(sock, tmp);
-    safefree((void **)&tmp);
   }
 }
 
 void reset_msg(struct irc_msg *msg) {
   msg->type = NONE;
-  safefree((void **)&msg->raw);
+  memset(msg->raw, 0 , strlen(msg->raw));
   safefree((void **)&msg->msg);
   safefree((void **)&msg->nick_sent);
   safefree((void **)&msg->channel);
 }
 
 void send_ident(struct irc_socket *sock, struct irc_server_info *srv) {
-  char *identmsg;
-  identmsg = str_combine("PASS ", srv->password);
+  char identmsg[MAX_LINE_SIZE];
+  memset(identmsg, 0, sizeof(identmsg));
+
+  str_add_to((char *)&identmsg, "PASS ", 0);
+  str_add_to((char *)&identmsg, srv->password, strlen(identmsg));
   send_raw(sock, identmsg);
-  safefree((void **)&identmsg);
-  identmsg = str_combine("NICK ", srv->nick);
+  memset(identmsg, 0, sizeof(identmsg));
+
+  str_add_to((char *)&identmsg, "NICK ", 0);
+  str_add_to((char *)&identmsg, srv->nick, strlen(identmsg));
   send_raw(sock, identmsg);
-  safefree((void **)&identmsg);
-  identmsg = str_combine("USER wat wat wat *:", srv->nick);
+  memset(identmsg, 0, sizeof(identmsg));
+
+  str_add_to((char *)&identmsg, "USER wat wat wat *:", 0);
+  str_add_to((char *)&identmsg, srv->nick, strlen(identmsg));
   send_raw(sock, identmsg);
-  safefree((void **)&identmsg);
 }

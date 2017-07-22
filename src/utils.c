@@ -16,7 +16,21 @@
 
 #include "utils.h"
 
+void str_add_to(char *str, const char *prefix, int dest) {
+  if(str == NULL || prefix == NULL || dest < 0) {
+    return;
+  }
+
+  for(int i = 0; i < strlen(prefix); i++) {
+    str[i + dest] = prefix[i];
+  }
+}
+
 char *str_combine(char *str1, char *str2) {
+  if(str1 == NULL || str2 == NULL) {
+    return NULL;
+  }
+
   size_t l = (strlen(str1) + strlen(str2) + 1);
   char *str = malloc(l);
 
@@ -41,20 +55,25 @@ bool str_empty(char *str) {
     return true;
   }
 
+  char buffer[strlen(str)];
   bool rval = false;
-  char *str1 = malloc(strlen(str) + 1);
-  strcpy(str1, str);
-  str_remove_spaces(str1, str);
 
-  if(strlen(str1) == 0) {
+  memset(buffer, 0, sizeof(buffer));
+  str_add_to((char *)&buffer, str, 0);
+  str_remove_spaces((char *)&buffer, str);
+
+  if(strlen(buffer) == 0) {
     rval = true;
   }
 
-  safefree((void **)&str1);
   return rval;
 }
 
 void str_remove_spaces(char *restrict trim, const char *restrict untrim) {
+  if(trim == NULL || untrim == NULL) {
+    return;
+  }
+
   while(*untrim != '\0') {
     if(!isspace(*trim)) {
       *trim = *untrim;
@@ -79,15 +98,16 @@ char **str_split(char *str, const char *delim, int max_splits, int *num_splits) 
   int found = 0;
   char **ret = malloc(max_splits * sizeof(char *));
   char *saveptr;
-  char *tok = strdup(str);
-  char *tmp = strtok_r(tok, delim, &saveptr);
+  char tok[strlen(str) + 1];
+  memset(tok, 0, sizeof(tok));
+  str_add_to((char *)&tok, str, 0);
+  char *tmp = strtok_r((char *)&tok, delim, &saveptr);
 
   while(tmp != NULL && found < max_splits) {
     ret[found] = strdup(tmp);
     tmp = strtok_r(NULL, delim, &saveptr);
     found++;
   }
-  safefree((void **)&tok);
   *num_splits = found;
   return ret;
 }

@@ -25,15 +25,20 @@
 
 bool send_raw(struct irc_socket *sock, char *string) {
   bool rval = true;
-  char *str = str_combine(string, "\n");
-  if(write(sock->sockfd, str, strlen(str)) < 0) {
+  int len = strlen(string) + 1;
+  char buffer[len]; //space for \n
+  memset(buffer, 0, sizeof(buffer));
+  str_add_to((char *)&buffer, string, 0);
+  buffer[len - 1] = '\n';
+  buffer[len] = '\0';
+
+  if(write(sock->sockfd, buffer, len) < 0) {
     fprintf(stderr, "ERROR writing to socket");
     rval = false;
   }
   if(PRINT_TO_STDOUT) {
-    fprintf(stdout,"<-- %s", str);
+    fprintf(stdout,"<-- %s", buffer);
   }
-  safefree((void **)&str);
   return rval;
 }
 
@@ -57,9 +62,9 @@ void create_connection(struct irc_server_info *srv) {
     exit(EXIT_FAILURE);
   }
 
-  bzero((char *) &sock.serv_addr, sizeof(sock.serv_addr));
+  memset((char *) &sock.serv_addr, 0, sizeof(sock.serv_addr));
   sock.serv_addr.sin_family = AF_INET;
-  bcopy((char *)sock.server->h_addr, (char *)&sock.serv_addr.sin_addr.s_addr, sock.server->h_length);
+  memcpy((char *)&sock.serv_addr.sin_addr.s_addr, (char *)sock.server->h_addr, sock.server->h_length);
   sock.serv_addr.sin_port = htons(srv->port);
 
   if (connect(sock.sockfd,(struct sockaddr *) &sock.serv_addr,sizeof(sock.serv_addr)) < 0) {
@@ -69,6 +74,8 @@ void create_connection(struct irc_server_info *srv) {
 
   srv->connected = true;
   send_ident(&sock, srv);
+
+  memset(msg.raw, 0, sizeof(msg.raw));
 
   while(srv->connected) {
     sock.bytes_read = read(sock.sockfd, sock.buffer, BUFFER_SIZE);
@@ -81,7 +88,7 @@ void create_connection(struct irc_server_info *srv) {
         o++;
         sock.line[o] = sock.buffer[i];
 
-        if((i > 0 && sock.buffer[i] == '\n' && sock.buffer[i - 1] == '\r') || (o + 1) == BUFFER_SIZE) {
+        if((i > 0 && sock.buffer[i] == '\n' && sock.buffer[i - 1] == '\r') || (o + 1) == MAX_LINE_SIZE) {
           sock.line[o] = '\n';
           sock.line[o + 1] = '\0';
           o = -1;
